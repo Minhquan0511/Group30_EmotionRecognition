@@ -1,0 +1,4 @@
+model,parameters,best_val_macro_f1,test_loss,test_accuracy,test_macro_f1,training_seconds
+softmax,16135,0.226801,1.930491,0.248537,0.222634,26.39
+mlp,295943,0.301178,1.668181,0.365283,0.306689,30.45
+cnn,171271,0.454027,1.237252,0.520758,0.46429,367.35

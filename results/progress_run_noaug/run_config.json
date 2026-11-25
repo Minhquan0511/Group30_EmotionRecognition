@@ -1,0 +1,20 @@
+{
+  "data": "outputs/Group30_SourceCode/data/fer2013_subset.npz",
+  "models": [
+    "softmax",
+    "mlp",
+    "cnn"
+  ],
+  "epochs": 30,
+  "batch_size": 64,
+  "learning_rate": 0.001,
+  "seed": 42,
+  "augment": false,
+  "output_dir": "outputs/Group30_SourceCode/results/progress_run_noaug",
+  "device": "cpu",
+  "split_sizes": {
+    "train": 1400,
+    "val": 350,
+    "test": 350
+  }
+}

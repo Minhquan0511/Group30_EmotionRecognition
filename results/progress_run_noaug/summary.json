@@ -1,0 +1,29 @@
+[
+  {
+    "model": "softmax",
+    "parameters": 16135,
+    "best_val_macro_f1": 0.25785,
+    "test_loss": 1.843183,
+    "test_accuracy": 0.297143,
+    "test_macro_f1": 0.265278,
+    "training_seconds": 0.72
+  },
+  {
+    "model": "mlp",
+    "parameters": 295943,
+    "best_val_macro_f1": 0.169483,
+    "test_loss": 1.920926,
+    "test_accuracy": 0.217143,
+    "test_macro_f1": 0.183862,
+    "training_seconds": 1.06
+  },
+  {
+    "model": "cnn",
+    "parameters": 171271,
+    "best_val_macro_f1": 0.296759,
+    "test_loss": 2.248685,
+    "test_accuracy": 0.334286,
+    "test_macro_f1": 0.305191,
+    "training_seconds": 27.09
+  }
+]

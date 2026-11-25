@@ -1,0 +1,31 @@
+{
+  "data": "data/fer2013_full.npz",
+  "models": [
+    "softmax",
+    "mlp",
+    "cnn"
+  ],
+  "epochs": 20,
+  "batch_size": 64,
+  "learning_rate": 0.001,
+  "mlp_learning_rate": 0.0001,
+  "seed": 42,
+  "augment": true,
+  "clahe": true,
+  "clahe_clip_limit": 2.0,
+  "standardize": true,
+  "output_dir": "results/full_preprocessing_run",
+  "device": "cpu",
+  "split_sizes": {
+    "train": 28709,
+    "val": 3589,
+    "test": 3589
+  },
+  "preprocessing": {
+    "clahe": true,
+    "clahe_clip_limit": 2.0,
+    "standardize": true,
+    "mean": 0.5365706086158752,
+    "std": 0.24029114842414856
+  }
+}
