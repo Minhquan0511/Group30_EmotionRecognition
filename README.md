@@ -1,18 +1,21 @@
-# Group 30 - Facial Emotion Recognition on FER-2013
+# Nhóm 30 - Nhận diện cảm xúc khuôn mặt trên FER-2013
 
-Du an nhap mon hoc may so sanh ba mo hinh tu don gian den phu hop voi anh:
+Đây là dự án môn Nhập môn học máy, xây dựng pipeline nhận diện cảm xúc từ ảnh
+khuôn mặt và so sánh ba mô hình có độ phức tạp tăng dần:
 
-1. `softmax`: hoi quy Softmax tren 2.304 gia tri pixel.
-2. `mlp`: mang truyen thang voi mot lop an 128 nut.
-3. `cnn`: CNN nho gom ba khoi tich chap.
+1. `softmax`: hồi quy Softmax trên 2.304 giá trị pixel.
+2. `mlp`: mạng truyền thẳng với một lớp ẩn gồm 128 nút.
+3. `cnn`: CNN nhỏ gồm ba khối tích chập.
 
-Tat ca mo hinh dung chung cach chia du lieu, class weight va cac chi so
-Accuracy, Macro-F1. Pipeline ho tro CLAHE, chuan hoa theo mean/std cua tap
-train va tang cuong du lieu. Ma nguon hien tai chua dung ResNet.
+Ba mô hình dùng cùng cách chia dữ liệu, class weight và các chỉ số Accuracy,
+Macro-F1 để việc so sánh công bằng. Pipeline hiện tại hỗ trợ CLAHE, chuẩn hóa
+theo mean và độ lệch chuẩn của tập train, cùng tăng cường dữ liệu cho tập train.
+Mã nguồn hiện tại chưa huấn luyện ResNet18; đây là hướng phát triển cho báo cáo
+cuối kỳ và demo webcam.
 
-## 1. Cai dat
+## 1. Cài đặt
 
-Khuyen nghi Python 3.10-3.12:
+Khuyến nghị sử dụng Python 3.10-3.12:
 
 ```bash
 python -m venv .venv
@@ -20,54 +23,70 @@ source .venv/bin/activate       # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-## 2. Chuan bi du lieu
+## 2. Chuẩn bị dữ liệu
 
-### Cach A - FER-2013 CSV goc
+### Cách A - Tệp CSV gốc của FER-2013
 
-Tai `fer2013.csv` tu trang cuoc thi FER-2013/Kaggle va dat tai:
+Tải `fer2013.csv` từ cuộc thi FER-2013 trên Kaggle và đặt tại:
 
 ```text
 data/fer2013.csv
 ```
 
-Sau do chuyen thanh tep NumPy:
+Sau đó chuyển dữ liệu sang tệp NumPy:
 
 ```bash
 python prepare_data.py --csv data/fer2013.csv --output data/fer2013.npz
 ```
 
-Chuong trinh ton trong cot `Usage` cua du lieu goc:
+Chương trình giữ nguyên cách chia trong cột `Usage` của dữ liệu gốc:
 
-- `Training`: huan luyen;
-- `PublicTest`: xac thuc;
-- `PrivateTest`: kiem thu.
+- `Training`: dùng để huấn luyện;
+- `PublicTest`: dùng làm validation và chọn checkpoint;
+- `PrivateTest`: chỉ dùng để đánh giá cuối cùng.
 
-### Cach B - bo anh da giai nen
+### Cách B - Bộ ảnh đã giải nén
 
-Neu du lieu co cau truc `train/<class>` va `test/<class>`, chay:
+Nếu dữ liệu có cấu trúc `train/<class>` và `test/<class>`, chạy:
 
 ```bash
-python prepare_image_folders.py --root /duong-dan/archive-2 \
+python prepare_image_folders.py --root /đường-dẫn/đến-bộ-dữ-liệu \
   --output data/fer2013_full.npz
 ```
 
-`archive-2` chi la ten thu muc tai ve tren may. Script kiem tra bat buoc du
-28.709 anh train, 3.589 anh validation va 3.589 anh test.
+Tên thư mục tải về trên máy không ảnh hưởng đến chương trình. Script kiểm tra
+bắt buộc đủ 28.709 ảnh train, 3.589 ảnh validation và 3.589 ảnh test.
 
-### Tap con de chay thu nhanh
+### Tập con để chạy thử nhanh
 
-Lenh sau lay mot tap con tu ban FER-2013 Enhanced cong khai tren Hugging Face.
-Cach nay chi phu hop voi smoke test/bao cao tien do, khong thay the thi nghiem
-tren toan bo du lieu cho bao cao cuoi ky.
+Lệnh sau tải một tập con từ bản FER-2013 Enhanced công khai trên Hugging Face.
+Cách này chỉ phù hợp để kiểm tra chương trình, không thay thế thí nghiệm trên
+toàn bộ FER-2013 trong báo cáo cuối kỳ.
 
 ```bash
 python fetch_subset.py --train-size 2100 --val-size 700 --test-size 700 \
   --output data/fer2013_subset.npz
 ```
 
-## 3. Chay thi nghiem
+## 3. Tiền xử lý và tăng cường dữ liệu
 
-Chay ca ba mo hinh tren toan bo du lieu voi tien xu ly day du:
+Pipeline đầy đủ thực hiện các bước sau:
+
+- đưa ảnh về ảnh xám kích thước 48 × 48 pixel;
+- áp dụng CLAHE với clip limit mặc định là 2,0 và lưới 8 × 8;
+- tính mean và độ lệch chuẩn chỉ trên tập train, sau đó dùng hai giá trị này để
+  chuẩn hóa train, validation và test;
+- chỉ tăng cường dữ liệu trên tập train bằng lật ngang với xác suất 50%, xoay
+  từ -10° đến 10°, co giãn trong khoảng 0,90-1,10, dịch tối đa 4 pixel và thay
+  đổi nhẹ độ sáng, tương phản;
+- không augmentation tập validation và test.
+
+Cách làm này giúp tăng độ đa dạng của dữ liệu huấn luyện mà không làm thay đổi
+dữ liệu dùng để lựa chọn và đánh giá mô hình.
+
+## 4. Chạy thí nghiệm
+
+Chạy cả ba mô hình trên toàn bộ dữ liệu với pipeline tiền xử lý đầy đủ:
 
 ```bash
 python train_compare.py --data data/fer2013_full.npz \
@@ -76,25 +95,27 @@ python train_compare.py --data data/fer2013_full.npz \
   --output-dir results/full_preprocessing_run
 ```
 
-Trong do:
+Ý nghĩa của các tùy chọn:
 
-- `--clahe`: tang tuong phan cuc bo cho anh;
-- `--standardize`: tinh mean/std chi tu tap train roi chuan hoa ca ba split;
-- `--augment`: chi bien doi ngau nhien anh train, gom lat ngang, xoay, zoom,
-  dich chuyen va thay doi sang/toi nhe.
+- `--clahe`: tăng tương phản cục bộ của ảnh;
+- `--standardize`: chuẩn hóa bằng mean và độ lệch chuẩn chỉ tính từ tập train;
+- `--augment`: áp dụng các biến đổi ngẫu nhiên cho ảnh train;
+- `--models`: chọn một hoặc nhiều mô hình cần huấn luyện;
+- `--output-dir`: thư mục lưu kết quả của lần chạy.
 
-Ket qua cua luot chay 20 epoch tren toan bo FER-2013:
+Kết quả của lần chạy 20 epoch trên toàn bộ FER-2013:
 
-| Mo hinh | Test Accuracy | Test Macro-F1 |
-|---|---:|---:|
-| Softmax | 24,85% | 22,26% |
-| MLP | 36,53% | 30,67% |
-| CNN nho | 52,08% | 46,43% |
+| Mô hình | Val Macro-F1 | Test Accuracy | Test Macro-F1 | Thời gian train |
+|---|---:|---:|---:|---:|
+| Softmax | 22,68% | 24,85% | 22,26% | 26,39 giây |
+| MLP | 30,12% | 36,53% | 30,67% | 30,45 giây |
+| CNN nhỏ | 45,40% | 52,08% | 46,43% | 367,35 giây |
 
-Tien xu ly day du cai thien Accuracy cua CNN, nhung khong co loi cho Softmax.
-Vi vay ket qua nay duoc luu rieng de so sanh voi benchmark khong tien xu ly.
+CNN nhỏ cho kết quả tốt nhất vì có thể khai thác quan hệ không gian giữa các
+vùng trên khuôn mặt. Softmax và MLP được dùng làm mô hình đối chứng để cho thấy
+ảnh hưởng của cấu trúc tích chập, không phải là mô hình cuối cùng cho demo.
 
-Chay nhanh tren tap con:
+Chạy nhanh trên tập con:
 
 ```bash
 python train_compare.py --data data/fer2013_subset.npz \
@@ -102,21 +123,17 @@ python train_compare.py --data data/fer2013_subset.npz \
   --output-dir results/progress_run
 ```
 
-Ket qua gom:
+Sau mỗi lần chạy, chương trình tạo:
 
-- `summary.csv` va `summary.json`: Accuracy, Macro-F1, thoi gian;
-- `*_confusion_matrix.png`: ma tran nham lan;
-- `*_history.png`: loss va accuracy theo epoch;
-- `*_best.pt`: trong so tot nhat theo validation Macro-F1;
-- `run_config.json`: cau hinh de tai lap thi nghiem.
+- `summary.csv` và `summary.json`: Accuracy, Macro-F1 và thời gian huấn luyện;
+- `*_confusion_matrix.png`: ma trận nhầm lẫn trên tập test;
+- `*_history.png`: loss và accuracy theo epoch;
+- `*_best.pt`: checkpoint tốt nhất theo validation Macro-F1;
+- `run_config.json`: cấu hình và thông tin tiền xử lý để tái lập thí nghiệm.
 
-Thu muc `results/progress_run_noaug` chua ket qua 30 epoch khong augmentation
-duoc trich vao bao cao tien do. Thu muc `results/progress_run` chua mot luot 15
-epoch co augmentation de kiem tra nhanh anh huong cua tang cuong du lieu.
+## 5. Demo webcam thời gian thực
 
-## 4. Demo webcam thoi gian thuc
-
-Sau khi co checkpoint CNN moi, ket noi webcam va chay:
+Sau khi có checkpoint CNN, kết nối webcam và chạy:
 
 ```bash
 python realtime_demo.py \
@@ -124,36 +141,41 @@ python realtime_demo.py \
   --camera 0
 ```
 
-Chuong trinh dung Haar Cascade cua OpenCV de phat hien khuon mat, dua vung mat
-ve anh xam 48 x 48 va hien nhan cam xuc cung do tin cay. Nhan `Q` de thoat.
-Checkpoint luu kem cau hinh CLAHE va mean/std, nen webcam se tu dong dung dung
-tien xu ly nhu luc train. Nhan dien cam xuc chi la du doan tu bieu hien ben
-ngoai, khong phai ket luan ve trang thai tam ly cua mot nguoi.
+Chương trình dùng Haar Cascade của OpenCV để phát hiện khuôn mặt, chuyển vùng
+khuôn mặt về ảnh xám 48 × 48 và hiển thị nhãn cảm xúc cùng độ tin cậy. Nhấn
+`Q` để thoát. Checkpoint lưu cấu hình CLAHE, mean và độ lệch chuẩn nên demo tự
+động dùng cùng cách tiền xử lý như lúc huấn luyện.
 
-## 5. Nguyen tac danh gia
+Kết quả nhận diện chỉ là dự đoán từ biểu hiện bên ngoài của khuôn mặt, không
+phải kết luận về trạng thái tâm lý của một người.
 
-- Khong dung tap test de chon mo hinh.
-- Chon checkpoint theo Macro-F1 tren validation.
-- Bao cao ca Accuracy va Macro-F1 vi FER-2013 mat can bang lop.
-- Co dinh seed de tang kha nang tai lap.
-- Ket qua tap con phai ghi ro la `preliminary/subset`.
+## 6. Nguyên tắc đánh giá
 
-## 6. Cau truc
+- Không dùng tập test để chọn mô hình hoặc điều chỉnh tham số.
+- Chọn checkpoint theo Macro-F1 trên tập validation.
+- Báo cáo cả Accuracy và Macro-F1 vì FER-2013 mất cân bằng giữa các lớp.
+- Dùng class weight tính từ tập train cho hàm mất mát.
+- Cố định seed để tăng khả năng tái lập kết quả.
+- Kết quả từ tập con phải ghi rõ là kết quả thử nghiệm sơ bộ.
+- ResNet18 và demo webcam là hướng phát triển, chưa được đưa vào bảng benchmark
+  hiện tại.
+
+## 7. Cấu trúc thư mục
 
 ```text
-Group30_SourceCode/
-|-- fetch_subset.py
-|-- prepare_data.py
-|-- prepare_image_folders.py
-|-- train_compare.py
-|-- realtime_demo.py
-|-- requirements.txt
+Group30_EmotionRecognition/
+|-- fetch_subset.py              # tải tập con để chạy thử
+|-- prepare_data.py              # chuyển FER-2013 CSV sang NPZ
+|-- prepare_image_folders.py     # chuyển bộ ảnh thư mục sang NPZ
+|-- train_compare.py             # huấn luyện và so sánh ba mô hình
+|-- realtime_demo.py             # nhận diện bằng webcam
+|-- requirements.txt             # các thư viện cần cài đặt
 |-- README.md
-|-- data/                  # du lieu khong dua vao ZIP
-`-- results/               # ket qua duoc tao sau khi chay
+|-- data/                        # dữ liệu đầu vào
+`-- results/                     # kết quả được tạo sau khi chạy
 ```
 
-## 7. Lien ket du lieu
+## 8. Liên kết dữ liệu
 
-- FER-2013 goc: https://www.kaggle.com/c/challenges-in-representation-learning-facial-expression-recognition-challenge
-- Ban dung de lay tap con: https://huggingface.co/datasets/abhilash88/fer2013-enhanced
+- FER-2013 gốc: https://www.kaggle.com/c/challenges-in-representation-learning-facial-expression-recognition-challenge
+- Bản dùng để lấy tập con: https://huggingface.co/datasets/abhilash88/fer2013-enhanced
